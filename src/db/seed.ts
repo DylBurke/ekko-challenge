@@ -122,60 +122,70 @@ export async function seedDatabase() {
     const [ceo] = await db.insert(users).values({
       name: 'Alice Johnson',
       email: 'alice.johnson@gekko.com',
+      role: 'Chief Executive Officer',
       spiritAnimal: 'Eagle',
     }).returning();
     
     const [hrManager] = await db.insert(users).values({
       name: 'Sarah Wilson',
       email: 'sarah.wilson@gekko.com',
+      role: 'HR Manager',
       spiritAnimal: 'Owl',
     }).returning();
     
     const [engineeringDirector] = await db.insert(users).values({
       name: 'David Chen',
       email: 'david.chen@gekko.com',
+      role: 'Engineering Director',
       spiritAnimal: 'Dragon',
     }).returning();
     
     const [salesDirector] = await db.insert(users).values({
       name: 'Maria Rodriguez',
       email: 'maria.rodriguez@gekko.com',
+      role: 'Sales Director',
       spiritAnimal: 'Lion',
     }).returning();
     
     const [frontendManager] = await db.insert(users).values({
       name: 'Alex Kim',
       email: 'alex.kim@gekko.com',
+      role: 'Frontend Manager',
       spiritAnimal: 'Phoenix',
     }).returning();
     
     const [backendManager] = await db.insert(users).values({
       name: 'Jordan Smith',
       email: 'jordan.smith@gekko.com',
+      role: 'Backend Manager',
       spiritAnimal: 'Bear',
     }).returning();
     
     const [enterpriseManager] = await db.insert(users).values({
       name: 'Emily Davis',
       email: 'emily.davis@gekko.com',
+      role: 'Enterprise Sales Manager',
       spiritAnimal: 'Wolf',
     }).returning();
     
     const [teamLead] = await db.insert(users).values({
       name: 'Michael Brown',
       email: 'michael.brown@gekko.com',
+      role: 'Team Lead',
       spiritAnimal: 'Hawk',
     }).returning();
     
     const [developer] = await db.insert(users).values({
       name: 'Lisa Thompson',
       email: 'lisa.thompson@gekko.com',
+      role: 'Frontend Developer',
       spiritAnimal: 'Fox',
     }).returning();
     
     const [salesRep] = await db.insert(users).values({
       name: 'Robert Garcia',
       email: 'robert.garcia@gekko.com',
+      role: 'Sales Representative',
       spiritAnimal: 'Tiger',
     }).returning();
     
@@ -256,24 +266,28 @@ export async function seedDatabase() {
     const [seniorDeveloper] = await db.insert(users).values({
       name: 'Jennifer Lee',
       email: 'jennifer.lee@gekko.com',
+      role: 'Senior Frontend Developer',
       spiritAnimal: 'Dolphin',
     }).returning();
     
     const [juniorDeveloper] = await db.insert(users).values({
       name: 'Mark Johnson',
       email: 'mark.johnson@gekko.com',
+      role: 'Backend Developer',
       spiritAnimal: 'Raven',
     }).returning();
     
     const [salesManager] = await db.insert(users).values({
       name: 'Steven Taylor',
       email: 'steven.taylor@gekko.com',
+      role: 'Sales Manager',
       spiritAnimal: 'Panther',
     }).returning();
     
     const [salesAssociate] = await db.insert(users).values({
       name: 'Amanda White',
       email: 'amanda.white@gekko.com',
+      role: 'Sales Associate',
       spiritAnimal: 'Butterfly',
     }).returning();
     
