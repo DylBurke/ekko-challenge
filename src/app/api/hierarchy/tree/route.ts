@@ -3,6 +3,7 @@ import { db } from '@/db/connection';
 import { organisationStructures, userPermissions } from '@/db/schema';
 import { count } from 'drizzle-orm';
 
+// I added this interface to help with the tree structure
 interface TreeNode {
   id: string;
   name: string;
