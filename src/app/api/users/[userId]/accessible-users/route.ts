@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/connection';
 import { organisationStructures, users, userPermissions } from '@/db/schema';
-import { eq, like, or, inArray } from 'drizzle-orm';
+import { eq, like, or, inArray, and, gt } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
@@ -18,7 +18,27 @@ export async function GET(
       );
     }
 
-    // Step 1: Get user's direct permissions (structures they have access to)
+    // Step 1: Get requesting user's information and their permissions
+    const requestingUser = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        spiritAnimal: users.spiritAnimal,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (requestingUser.length === 0) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Step 2: Get user's direct permissions (structures they have access to)
     const userDirectPermissions = await db
       .select({
         structureId: userPermissions.structureId,
@@ -41,7 +61,7 @@ export async function GET(
       });
     }
 
-    // Step 2: Find all downstream structures using materialized paths
+    // Step 3: Find all downstream structures using materialized paths
     // For each structure the user has access to, find all descendant structures
     const pathConditions = userDirectPermissions.map(permission => 
       like(organisationStructures.path, `${permission.structurePath}/%`)
@@ -67,7 +87,8 @@ export async function GET(
         )
       );
 
-    // Step 3: Find all users who have permissions to these accessible structures
+    // Step 4: Find all users who have permissions to these accessible structures
+    // BUT only include users who are positioned DOWNSTREAM from the requesting user
     const accessibleStructureIds = allAccessibleStructures.map(s => s.id);
 
     if (accessibleStructureIds.length === 0) {
@@ -81,6 +102,15 @@ export async function GET(
       });
     }
 
+    // Step 5: Get the requesting user's highest access level (lowest number = highest level)
+    const requestingUserHighestLevel = Math.min(...userDirectPermissions.map(p => p.structureLevel));
+
+        // Step 6: Find users who are positioned downstream from the requesting user
+    // This means users whose permissions are to structures that are:
+    // 1. Within the requesting user's accessible structures
+    // 2. At a LOWER organizational level (higher number) than the requesting user's position
+    // Simple rule: users can only see users with permissions to structures that are children of their structures
+    
     const accessibleUsers = await db
       .select({
         userId: users.id,
@@ -96,10 +126,28 @@ export async function GET(
       .from(users)
       .innerJoin(userPermissions, eq(users.id, userPermissions.userId))
       .innerJoin(organisationStructures, eq(userPermissions.structureId, organisationStructures.id))
-      .where(inArray(userPermissions.structureId, accessibleStructureIds))
+      .where(
+        and(
+          inArray(userPermissions.structureId, accessibleStructureIds),
+          or(
+            // Users at lower structural levels (downstream)
+            and(
+              gt(organisationStructures.level, requestingUserHighestLevel),
+              // Ensure the user's structure path is actually downstream from requesting user's permissions
+              or(
+                ...userDirectPermissions.map(permission => 
+                  like(organisationStructures.path, `${permission.structurePath}/%`)
+                )
+              )
+            ),
+            // Include requesting user themselves
+            eq(users.id, userId)
+          )
+        )
+      )
       .orderBy(organisationStructures.level, users.name);
 
-    // Step 4: Group results by user to avoid duplicates
+    // Step 7: Group results by user to avoid duplicates
     const userMap = new Map();
     
     accessibleUsers.forEach(result => {
