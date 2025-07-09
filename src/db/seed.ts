@@ -168,12 +168,7 @@ export async function seedDatabase() {
       spiritAnimal: 'Wolf',
     }).returning();
     
-    const [teamLead] = await db.insert(users).values({
-      name: 'Michael Brown',
-      email: 'michael.brown@gekko.com',
-      role: 'Team Lead',
-      spiritAnimal: 'Hawk',
-    }).returning();
+
     
     const [developer] = await db.insert(users).values({
       name: 'Lisa Thompson',
@@ -232,17 +227,7 @@ export async function seedDatabase() {
       structureId: enterprise.id,
     });
     
-    // Team Lead can see their specific team (React Platform)
-    await db.insert(userPermissions).values({
-      userId: teamLead.id,
-      structureId: reactTeam.id,
-    });
-    
-    // Team Lead ALSO has access to Mobile team (multiple permissions example)
-    await db.insert(userPermissions).values({
-      userId: teamLead.id,
-      structureId: mobileTeam.id,
-    });
+
     
     // Developer is assigned to React Platform team (so Team Lead can see them)
     await db.insert(userPermissions).values({
@@ -256,11 +241,7 @@ export async function seedDatabase() {
       structureId: enterprise.id,
     });
     
-    // Frontend Manager ALSO has access to Digital Marketing (cross-functional work)
-    await db.insert(userPermissions).values({
-      userId: frontendManager.id,
-      structureId: digital.id,
-    });
+
     
     // Create additional users to demonstrate downstream access
     const [seniorDeveloper] = await db.insert(users).values({
@@ -325,7 +306,6 @@ export async function seedDatabase() {
     console.log('Engineering Director (David Chen) can see: All engineering users');
     console.log('  - Frontend Manager (Alex Kim)');
     console.log('  - Backend Manager (Jordan Smith)'); 
-    console.log('  - Team Lead (Michael Brown)');
     console.log('  - Developer (Lisa Thompson)');
     console.log('  - Senior Developer (Jennifer Lee)');
     console.log('  - Junior Developer (Mark Johnson)');
@@ -335,19 +315,11 @@ export async function seedDatabase() {
     console.log('  - Sales Manager (Steven Taylor)');
     console.log('  - Sales Associate (Amanda White)');
     console.log('Frontend Manager (Alex Kim) can see:');
-    console.log('  - Team Lead (Michael Brown)');
     console.log('  - Developer (Lisa Thompson)');
     console.log('  - Senior Developer (Jennifer Lee)');
-    console.log('Team Lead (Michael Brown) can see:');
-    console.log('  - Developer (Lisa Thompson) [React team]');
-    console.log('  - Senior Developer (Jennifer Lee) [Mobile team]');
-    console.log('\n=== MULTIPLE PERMISSIONS DEMONSTRATION ===');
-    console.log('Team Lead (Michael Brown) has access to:');
-    console.log('  - React Platform Team');
-    console.log('  - Mobile Team');
+    console.log('\n=== SIMPLIFIED PERMISSIONS DEMONSTRATION ===');
     console.log('Frontend Manager (Alex Kim) has access to:');
-    console.log('  - Frontend Engineering Department');
-    console.log('  - Digital Marketing Department (cross-functional)');
+    console.log('  - Frontend Engineering Department only');
     console.log('==================================\n');
     
     return {
@@ -375,7 +347,6 @@ export async function seedDatabase() {
         frontendManager,
         backendManager,
         enterpriseManager,
-        teamLead,
         developer,
         salesRep,
         seniorDeveloper,

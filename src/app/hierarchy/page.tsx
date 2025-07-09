@@ -1,18 +1,85 @@
-import { OrganizationalTree } from "@/components/organizational-tree";
+"use client";
+
+import { AdminHierarchyTree } from "@/components/admin-hierarchy-tree";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
+import { useState, useEffect, useCallback } from "react";
+
+interface HierarchyNode {
+  id: string;
+  name: string;
+  level: number;
+  path: string;
+  parentId: string | null;
+  userCount: number;
+  children?: HierarchyNode[];
+  isNewlyCreated?: boolean;
+}
 
 export default function HierarchyPage() {
+  const [hierarchyTree, setHierarchyTree] = useState<HierarchyNode[]>([]);
+  const [totalUsers, setTotalUsers] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+
+  const addUserCountsToTree = useCallback((tree: HierarchyNode[]): HierarchyNode[] => {
+    // Set user count to 0 for display purposes - we'll show real total separately
+    return tree.map(node => ({
+      ...node,
+      userCount: 0,
+      children: node.children ? addUserCountsToTree(node.children) : undefined
+    }));
+  }, []);
+
+  const fetchHierarchyData = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch both hierarchy and users data
+      const [hierarchyResponse, usersResponse] = await Promise.all([
+        fetch('/api/hierarchy/tree'),
+        fetch('/api/users')
+      ]);
+      
+      if (hierarchyResponse.ok && usersResponse.ok) {
+        const hierarchyData = await hierarchyResponse.json();
+        const usersData = await usersResponse.json();
+        
+        if (hierarchyData.success) {
+          const treeWithUserCounts = addUserCountsToTree(hierarchyData.data.tree);
+          setHierarchyTree(treeWithUserCounts);
+        }
+        
+        if (usersData.success) {
+          setTotalUsers(usersData.data.length);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching hierarchy data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [addUserCountsToTree]);
+
+  useEffect(() => {
+    fetchHierarchyData();
+  }, [fetchHierarchyData]);
+
+  const handleAddStructure = (parentId: string, name: string) => {
+    // In a real app, you would create the structure here
+    console.log('Add structure:', name, 'to parent:', parentId);
+  };
+
+  const handleViewUsers = (structureId: string, structureName: string) => {
+    // In a real app, you would show users for this structure
+    console.log('View users for:', structureName);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            {/* Logo and Company Name */}
             <div className="flex items-center space-x-3">
               <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-lg">G</span>
@@ -23,15 +90,17 @@ export default function HierarchyPage() {
               </div>
             </div>
             
-            {/* Navigation */}
             <nav className="flex items-center space-x-4">
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/">Dashboard</Link>
+                <Link href="/">Home</Link>
               </Button>
               <Button variant="default" size="sm">Hierarchy</Button>
-              <Button variant="ghost" size="sm">Users</Button>
-              <Button variant="ghost" size="sm">Permissions</Button>
-              <Button variant="ghost" size="sm">Settings</Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/demo">User Demo</Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/admin">Admin</Link>
+              </Button>
             </nav>
           </div>
         </div>
@@ -39,90 +108,22 @@ export default function HierarchyPage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-3xl font-bold text-foreground mb-2">
-                Organizational Structure
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Explore the complete hierarchy of Gekko Pty Ltd
-              </p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Button variant="outline">
-                <span className="mr-2">📥</span>
-                Export
-              </Button>
-              <Button>
-                <span className="mr-2">➕</span>
-                Add Structure
-              </Button>
-            </div>
-          </div>
-
-          <Separator className="mb-6" />
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total Structures
-                </CardTitle>
-                <span className="text-2xl font-bold text-foreground">17</span>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Max Depth
-                </CardTitle>
-                <span className="text-2xl font-bold text-foreground">4</span>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total Users
-                </CardTitle>
-                <span className="text-2xl font-bold text-foreground">14</span>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Active Permissions
-                </CardTitle>
-                <span className="text-2xl font-bold text-foreground">16</span>
-              </CardHeader>
-            </Card>
-          </div>
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-foreground mb-2">
+            Organizational Hierarchy
+          </h2>
+          <p className="text-muted-foreground">
+            Interactive view of the organizational structure with color-coded levels
+          </p>
         </div>
 
-        {/* Organizational Tree Component */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Organizational Tree</CardTitle>
-                <CardDescription>
-                  Interactive view of the complete organizational structure
-                </CardDescription>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Badge variant="secondary">Company</Badge>
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Division</Badge>
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Department</Badge>
-                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Team</Badge>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <OrganizationalTree />
-          </CardContent>
-        </Card>
+        <AdminHierarchyTree 
+          tree={hierarchyTree}
+          onAddStructure={handleAddStructure}
+          onViewUsers={handleViewUsers}
+          loading={loading}
+          realUserCount={totalUsers}
+        />
       </main>
     </div>
   );
