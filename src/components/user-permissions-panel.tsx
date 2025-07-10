@@ -210,7 +210,7 @@ export function UserPermissionsPanel({ user, permissions, loading }: UserPermiss
               <p className="text-xs text-blue-700 mt-1">
                 {hasCrossFunctionalAccess ? 
                   "Cross-functional access across different divisions" : 
-                  "Multiple permissions within organizational scope"
+                  "Multiple permissions within organisational scope"
                 }
               </p>
             </div>

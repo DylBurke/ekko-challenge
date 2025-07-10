@@ -153,7 +153,7 @@ export default function DemoPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">Hierarchical Permission System Demo</h1>
-                <p className="text-sm text-muted-foreground">Gekko Pty Ltd - Organizational Access Control Demonstration</p>
+                <p className="text-sm text-muted-foreground">Gekko Pty Ltd - Organisational Access Control Demonstration</p>
               </div>
             </div>
             

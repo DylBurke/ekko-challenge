@@ -16,7 +16,7 @@ interface TreeNode {
 
 export async function GET() {
   try {
-    // Step 1: Get all organization structures
+    // Step 1: Get all organisation structures
     const allStructures = await db
       .select({
         id: organisationStructures.id,

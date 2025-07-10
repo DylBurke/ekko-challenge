@@ -15,7 +15,7 @@ export default function Home() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">Gekko Pty Ltd</h1>
-                <p className="text-sm text-muted-foreground">Organizational Management</p>
+                <p className="text-sm text-muted-foreground">Organisational Management</p>
               </div>
             </div>
             
@@ -42,7 +42,7 @@ export default function Home() {
             Welcome to Gekko
           </h2>
           <p className="text-lg text-muted-foreground">
-            Manage your organizational hierarchy and user permissions.
+            Manage your organisational hierarchy and user permissions.
           </p>
         </div>
 
@@ -54,7 +54,7 @@ export default function Home() {
             <CardContent className="space-y-3">
               <Button className="w-full justify-start" variant="outline" asChild>
                 <Link href="/hierarchy">
-                  View Organizational Tree
+                  View Organisational Tree
                 </Link>
               </Button>
               <Button className="w-full justify-start" variant="outline">

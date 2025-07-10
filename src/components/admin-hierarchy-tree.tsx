@@ -235,7 +235,7 @@ export function AdminHierarchyTree({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Organizational Hierarchy</CardTitle>
+          <CardTitle>Organisational Hierarchy</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">

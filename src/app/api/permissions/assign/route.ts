@@ -104,7 +104,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<AssignPer
         { 
           success: false,
           error: 'Structure not found',
-          message: `No organizational structure found with ID: ${body.structureId}`
+          message: `No organisational structure found with ID: ${body.structureId}`
         },
         { status: 404 }
       );

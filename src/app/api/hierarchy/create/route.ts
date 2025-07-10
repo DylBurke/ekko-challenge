@@ -117,7 +117,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateStr
           { 
             success: false,
             error: 'Parent not found',
-            message: `No organizational structure found with ID: ${parentId}`
+            message: `No organisational structure found with ID: ${parentId}`
           },
           { status: 404 }
         );
@@ -259,7 +259,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateStr
     });
 
   } catch (error) {
-    console.error('Error creating organizational structure:', error);
+    console.error('Error creating organisational structure:', error);
     
     // Handle JSON parsing errors
     if (error instanceof SyntaxError) {

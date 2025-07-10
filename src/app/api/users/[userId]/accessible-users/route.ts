@@ -116,7 +116,7 @@ export async function GET(
         // Step 6: Find users who are positioned downstream from the requesting user
     // This means users whose permissions are to structures that are:
     // 1. Within the requesting user's accessible structures
-    // 2. At a LOWER organizational level (higher number) than the requesting user's position
+    // 2. At a LOWER organisational level (higher number) than the requesting user's position
     // Simple rule: users can only see users with permissions to structures that are children of their structures
     
     const accessibleUsers = await db

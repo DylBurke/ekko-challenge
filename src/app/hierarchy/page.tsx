@@ -86,7 +86,7 @@ export default function HierarchyPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">Gekko Pty Ltd</h1>
-                <p className="text-sm text-muted-foreground">Organizational Hierarchy</p>
+                <p className="text-sm text-muted-foreground">Organisational Hierarchy</p>
               </div>
             </div>
             
@@ -110,10 +110,10 @@ export default function HierarchyPage() {
       <main className="container mx-auto px-6 py-8">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-foreground mb-2">
-            Organizational Hierarchy
+            Organisational Hierarchy
           </h2>
           <p className="text-muted-foreground">
-            Interactive view of the organizational structure with color-coded levels
+            Interactive view of the organisational structure with color-coded levels
           </p>
         </div>
 

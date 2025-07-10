@@ -5,18 +5,18 @@ import { TreeNode } from "./tree-node";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface OrganizationStructure {
+interface OrganisationStructure {
   id: string;
   name: string;
   level: number;
   path: string;
   parentId: string | null;
   userCount: number;
-  children?: OrganizationStructure[];
+  children?: OrganisationStructure[];
 }
 
 interface HierarchyData {
-  tree: OrganizationStructure[];
+  tree: OrganisationStructure[];
   metadata: {
     totalStructures: number;
     maxDepth: number;
@@ -25,7 +25,7 @@ interface HierarchyData {
   };
 }
 
-export function OrganizationalTree() {
+export function OrganisationalTree() {
   const [data, setData] = useState<HierarchyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,8 +47,8 @@ export function OrganizationalTree() {
         // Auto-expand root nodes
         if (result.data.tree) {
           const rootIds = result.data.tree
-            .filter((node: OrganizationStructure) => node.level === 0)
-            .map((node: OrganizationStructure) => node.id);
+            .filter((node: OrganisationStructure) => node.level === 0)
+            .map((node: OrganisationStructure) => node.id);
           setExpandedNodes(new Set(rootIds));
         }
       } else {
@@ -99,7 +99,7 @@ export function OrganizationalTree() {
   if (!data?.tree?.length) {
     return (
       <div className="text-center py-8">
-        <p className="text-muted-foreground">No organizational structures found.</p>
+        <p className="text-muted-foreground">No organisational structures found.</p>
       </div>
     );
   }

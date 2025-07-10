@@ -5,18 +5,18 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Users, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface OrganizationStructure {
+interface OrganisationStructure {
   id: string;
   name: string;
   level: number;
   path: string;
   parentId: string | null;
   userCount: number;
-  children?: OrganizationStructure[];
+  children?: OrganisationStructure[];
 }
 
 interface TreeNodeProps {
-  node: OrganizationStructure;
+  node: OrganisationStructure;
   isExpanded: boolean;
   onToggle: (nodeId: string) => void;
   depth?: number;

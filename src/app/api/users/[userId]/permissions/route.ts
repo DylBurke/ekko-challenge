@@ -83,7 +83,7 @@ export async function GET(
       accessLevels: [...new Set(userDirectPermissions.map(p => p.structureLevel))].sort(),
     };
 
-    // Step 4: Group permissions by level for better organization
+    // Step 4: Group permissions by level for better organisation
     const permissionsByLevel = userDirectPermissions.reduce((acc, perm) => {
       const level = perm.structureLevel;
       if (!acc[level]) {

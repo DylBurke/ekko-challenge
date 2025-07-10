@@ -293,7 +293,7 @@ export default function ScalableAccessibleUsers({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          {viewState.mode === 'tree' && 'Accessible Users - Organization View'}
+          {viewState.mode === 'tree' && 'Accessible Users - Organisation View'}
           {viewState.mode === 'users' && `Users in ${viewState.selectedStructureName}`}
           {viewState.mode === 'search' && `Search Results for "${viewState.searchQuery}"`}
         </CardTitle>
@@ -338,7 +338,7 @@ export default function ScalableAccessibleUsers({
                   treeData.map(node => renderTreeNode(node))
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    No organizational structures found
+                    No organisational structures found
                   </div>
                 )}
               </div>
@@ -367,7 +367,7 @@ export default function ScalableAccessibleUsers({
         {/* Summary */}
         {viewState.mode === 'tree' && !isLoading && currentUserName && (
           <div className="mt-4 pt-4 border-t text-sm text-muted-foreground">
-            <strong>{currentUserName}</strong> can access users in the organizational structures shown above.
+            <strong>{currentUserName}</strong> can access users in the organisational structures shown above.
             Click on any structure to view its users, or use search to find specific people.
           </div>
         )}
