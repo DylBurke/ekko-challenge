@@ -8,8 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, Shield, Plus, Users, Building2, Activity, Clock, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { AlertTriangle, Shield, Plus, Users, Building2, Activity, Clock, CheckCircle2, AlertCircle, RefreshCw, UserPlus, Search } from "lucide-react";
 import Link from "next/link";
+import UserSearch from "@/components/user-search";
+import { ToastContainer } from "@/components/ui/toast";
+import { useToast } from "@/hooks/use-toast";
 
 import { cn } from "@/lib/utils";
 
@@ -43,7 +46,7 @@ interface HierarchyTreeNode {
 export default function AdminPage() {
   // Admin mode is always active on this page
   const [activeTab, setActiveTab] = useState("overview");
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [, setAllUsers] = useState<User[]>([]);
   const [allStructures, setAllStructures] = useState<Structure[]>([]);
   const [loading, setLoading] = useState(false);
   const [systemStats, setSystemStats] = useState({
@@ -52,6 +55,9 @@ export default function AdminPage() {
     totalPermissions: 0,
     lastUpdated: new Date().toISOString()
   });
+
+  // Toast notifications
+  const { toasts, success, error, removeToast } = useToast();
 
   // Admin Actions Log
   const [adminActions, setAdminActions] = useState<Array<{
@@ -70,8 +76,19 @@ export default function AdminPage() {
 
   // Permission Assignment State
   const [permissionAssignment, setPermissionAssignment] = useState({
-    userId: '',
+    selectedUser: null as User | null,
     structureIds: [] as string[],
+  });
+
+  // User Creation State
+  const [userCreation, setUserCreation] = useState({
+    mode: 'search' as 'search' | 'create',
+    newUser: {
+      name: '',
+      email: '',
+      role: '',
+      spiritAnimal: '',
+    },
   });
 
   // Fetch initial data
@@ -114,6 +131,60 @@ export default function AdminPage() {
     }
   };
 
+  const handleUserSelect = (user: User) => {
+    setPermissionAssignment(prev => ({ ...prev, selectedUser: user }));
+  };
+
+  const handleCreateUser = async () => {
+    const { name, email, role, spiritAnimal } = userCreation.newUser;
+    
+    if (!name || !email || !role || !spiritAnimal) {
+      const errorMsg = 'All fields are required for creating a user';
+      error('User Creation Failed', errorMsg);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          email,
+          role,
+          spiritAnimal,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        const createdUser = result.data;
+        const successMsg = `Created user "${createdUser.name}" successfully`;
+        success('User Created', successMsg);
+        addAdminAction('Create User', successMsg);
+        
+        // Auto-select the created user for permission assignment
+        setPermissionAssignment(prev => ({ ...prev, selectedUser: createdUser }));
+        
+        // Reset form and switch to search mode
+        setUserCreation({
+          mode: 'search',
+          newUser: { name: '', email: '', role: '', spiritAnimal: '' },
+        });
+      } else {
+        const errorMsg = result.message || 'Failed to create user';
+        error('User Creation Failed', errorMsg);
+        addAdminAction('Create User', `Failed: ${errorMsg}`, 'error');
+      }
+    } catch (err) {
+      console.error('Create user error:', err);
+      const errorMsg = 'Network error occurred';
+      error('User Creation Failed', errorMsg);
+      addAdminAction('Create User', `Failed: ${errorMsg}`, 'error');
+    }
+  };
+
 
 
   const flattenStructureTree = (tree: HierarchyTreeNode[]): Structure[] => {
@@ -151,7 +222,9 @@ export default function AdminPage() {
 
   const handleCreateStructure = async () => {
     if (!newStructure.name || !newStructure.parentId) {
-      addAdminAction('Create Structure', 'Failed: Name and parent are required', 'error');
+      const errorMsg = 'Name and parent are required';
+      addAdminAction('Create Structure', `Failed: ${errorMsg}`, 'error');
+      error('Create Structure Failed', errorMsg);
       return;
     }
 
@@ -168,31 +241,43 @@ export default function AdminPage() {
       const result = await response.json();
       
       if (result.success) {
-        addAdminAction('Create Structure', `Created "${newStructure.name}" successfully`);
+        const successMsg = `Created "${newStructure.name}" successfully`;
+        addAdminAction('Create Structure', successMsg);
+        success('Structure Created', successMsg);
         setNewStructure({ name: '', parentId: '' });
         fetchSystemData(); // Refresh data
       } else {
-        addAdminAction('Create Structure', `Failed: ${result.message}`, 'error');
+        const errorMsg = result.message || 'Failed to create structure';
+        addAdminAction('Create Structure', `Failed: ${errorMsg}`, 'error');
+        error('Create Structure Failed', errorMsg);
       }
-    } catch (error) {
-      console.error('Create structure error:', error);
-      addAdminAction('Create Structure', 'Failed: Network error', 'error');
+    } catch (err) {
+      console.error('Create structure error:', err);
+      const errorMsg = 'Network error occurred';
+      addAdminAction('Create Structure', `Failed: ${errorMsg}`, 'error');
+      error('Create Structure Failed', errorMsg);
     }
   };
 
   const handleAssignPermission = async () => {
-    if (!permissionAssignment.userId || permissionAssignment.structureIds.length === 0) {
-      addAdminAction('Assign Permission', 'Failed: User and structures are required', 'error');
+    if (!permissionAssignment.selectedUser || permissionAssignment.structureIds.length === 0) {
+      const errorMsg = 'User and structures are required';
+      addAdminAction('Assign Permission', `Failed: ${errorMsg}`, 'error');
+      error('Assignment Failed', errorMsg);
       return;
     }
 
     try {
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
       for (const structureId of permissionAssignment.structureIds) {
         const response = await fetch('/api/permissions/assign', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: permissionAssignment.userId,
+            userId: permissionAssignment.selectedUser.id,
             structureId
           })
         });
@@ -200,18 +285,39 @@ export default function AdminPage() {
         const result = await response.json();
         
         if (result.success) {
-          const user = allUsers.find(u => u.id === permissionAssignment.userId);
           const structure = allStructures.find(s => s.id === structureId);
-          addAdminAction('Assign Permission', `Assigned ${user?.name} to ${structure?.name}`);
+          const successMsg = `Assigned ${permissionAssignment.selectedUser.name} to ${structure?.name}`;
+          addAdminAction('Assign Permission', successMsg);
+          successCount++;
         } else {
-          addAdminAction('Assign Permission', `Failed: ${result.message}`, 'error');
+          const errorMsg = result.message || 'Unknown error';
+          addAdminAction('Assign Permission', `Failed: ${errorMsg}`, 'error');
+          errors.push(errorMsg);
+          errorCount++;
         }
       }
       
-      setPermissionAssignment({ userId: '', structureIds: [] });
-    } catch (error) {
-      console.error('Assign permission error:', error);
-      addAdminAction('Assign Permission', 'Failed: Network error', 'error');
+      // Show summary notifications
+      if (successCount > 0) {
+        success(
+          'Permissions Assigned',
+          `Successfully assigned ${successCount} permission${successCount > 1 ? 's' : ''} to ${permissionAssignment.selectedUser.name}`
+        );
+      }
+      
+      if (errorCount > 0) {
+        error(
+          'Some Assignments Failed',
+          `${errorCount} assignment${errorCount > 1 ? 's' : ''} failed: ${errors.join(', ')}`
+        );
+      }
+      
+      setPermissionAssignment({ selectedUser: null, structureIds: [] });
+    } catch (err) {
+      console.error('Assign permission error:', err);
+      const errorMsg = 'Network error occurred';
+      addAdminAction('Assign Permission', `Failed: ${errorMsg}`, 'error');
+      error('Assignment Failed', errorMsg);
     }
   };
 
@@ -417,7 +523,11 @@ export default function AdminPage() {
                     </Select>
                   </div>
 
-                  <Button onClick={handleCreateStructure} className="w-full">
+                  <Button 
+                    onClick={handleCreateStructure} 
+                    className="w-full transition-all duration-200 hover:scale-105 hover:shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!newStructure.name || !newStructure.parentId}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Create Structure
                   </Button>
@@ -433,28 +543,138 @@ export default function AdminPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="user-select">Select User</Label>
-                    <Select 
-                      value={permissionAssignment.userId} 
-                      onValueChange={(value) => setPermissionAssignment(prev => ({ ...prev, userId: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select user" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allUsers.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name} - {user.role}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  {/* Mode Toggle */}
+                  <div className="flex items-center justify-center">
+                    <div className="flex bg-muted rounded-lg p-1">
+                      <button
+                        onClick={() => setUserCreation(prev => ({ ...prev, mode: 'search' }))}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                          userCreation.mode === 'search'
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <Search className="h-4 w-4" />
+                        Search Existing
+                      </button>
+                      <button
+                        onClick={() => setUserCreation(prev => ({ ...prev, mode: 'create' }))}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                          userCreation.mode === 'create'
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        Create New
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Search Mode */}
+                  {userCreation.mode === 'search' && (
+                    <div>
+                      <Label htmlFor="user-search">Search User</Label>
+                      <UserSearch
+                        onUserSelect={handleUserSelect}
+                        placeholder="Search users by name or email..."
+                        className="w-full"
+                      />
+                    </div>
+                  )}
+
+                  {/* Create Mode */}
+                  {userCreation.mode === 'create' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="user-name">Full Name</Label>
+                          <Input
+                            id="user-name"
+                            placeholder="John Doe"
+                            value={userCreation.newUser.name}
+                            onChange={(e) => setUserCreation(prev => ({
+                              ...prev,
+                              newUser: { ...prev.newUser, name: e.target.value }
+                            }))}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="user-email">Email</Label>
+                          <Input
+                            id="user-email"
+                            type="email"
+                            placeholder="john@company.com"
+                            value={userCreation.newUser.email}
+                            onChange={(e) => setUserCreation(prev => ({
+                              ...prev,
+                              newUser: { ...prev.newUser, email: e.target.value }
+                            }))}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="user-role">Role</Label>
+                          <Input
+                            id="user-role"
+                            placeholder="Software Engineer"
+                            value={userCreation.newUser.role}
+                            onChange={(e) => setUserCreation(prev => ({
+                              ...prev,
+                              newUser: { ...prev.newUser, role: e.target.value }
+                            }))}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="user-spirit-animal">Spirit Animal</Label>
+                          <Input
+                            id="user-spirit-animal"
+                            placeholder="Eagle"
+                            value={userCreation.newUser.spiritAnimal}
+                            onChange={(e) => setUserCreation(prev => ({
+                              ...prev,
+                              newUser: { ...prev.newUser, spiritAnimal: e.target.value }
+                            }))}
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        onClick={handleCreateUser}
+                        className="w-full transition-all duration-200 hover:scale-105 hover:shadow-md active:scale-95"
+                        disabled={!userCreation.newUser.name || !userCreation.newUser.email || !userCreation.newUser.role || !userCreation.newUser.spiritAnimal}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Create User
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Selected User Display */}
+                  {permissionAssignment.selectedUser && (
+                    <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{permissionAssignment.selectedUser.name}</p>
+                          <p className="text-sm text-muted-foreground">{permissionAssignment.selectedUser.role}</p>
+                        </div>
+                        <Badge variant="secondary">{permissionAssignment.selectedUser.spiritAnimal}</Badge>
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <Label htmlFor="structure-select">Select Structures</Label>
-                    <Select>
+                    <Select
+                      onValueChange={(structureId) => {
+                        if (!permissionAssignment.structureIds.includes(structureId)) {
+                          setPermissionAssignment(prev => ({
+                            ...prev,
+                            structureIds: [...prev.structureIds, structureId]
+                          }));
+                        }
+                      }}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select structures to assign" />
                       </SelectTrigger>
@@ -463,14 +683,6 @@ export default function AdminPage() {
                           <SelectItem 
                             key={structure.id} 
                             value={structure.id}
-                            onClick={() => {
-                              if (!permissionAssignment.structureIds.includes(structure.id)) {
-                                setPermissionAssignment(prev => ({
-                                  ...prev,
-                                  structureIds: [...prev.structureIds, structure.id]
-                                }));
-                              }
-                            }}
                           >
                             {"  ".repeat(structure.level)}{structure.name} (Level {structure.level})
                           </SelectItem>
@@ -486,8 +698,18 @@ export default function AdminPage() {
                         {permissionAssignment.structureIds.map(id => {
                           const structure = allStructures.find(s => s.id === id);
                           return structure ? (
-                            <Badge key={id} variant="outline">
-                              {structure.name}
+                            <Badge 
+                              key={id} 
+                              variant="outline"
+                              className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
+                              onClick={() => {
+                                setPermissionAssignment(prev => ({
+                                  ...prev,
+                                  structureIds: prev.structureIds.filter(structureId => structureId !== id)
+                                }));
+                              }}
+                            >
+                              {structure.name} ×
                             </Badge>
                           ) : null;
                         })}
@@ -495,7 +717,11 @@ export default function AdminPage() {
                     </div>
                   )}
 
-                  <Button onClick={handleAssignPermission} className="w-full">
+                  <Button 
+                    onClick={handleAssignPermission} 
+                    className="w-full transition-all duration-200 hover:scale-105 hover:shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!permissionAssignment.selectedUser || permissionAssignment.structureIds.length === 0}
+                  >
                     <Shield className="h-4 w-4 mr-2" />
                     Assign Permissions
                   </Button>
@@ -507,6 +733,9 @@ export default function AdminPage() {
 
         </Tabs>
       </main>
+      
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 } 
