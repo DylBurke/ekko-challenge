@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Clock, Users } from "lucide-react";
 import Link from "next/link";
 import { UserPermissionsPanel } from "@/components/user-permissions-panel";
-import { AccessibleUsersPanel } from "@/components/accessible-users-panel";
+import ScalableAccessibleUsers from "@/components/scalable-accessible-users";
+import UserSearch from "@/components/user-search";
 
 // Helper function to determine user level based on role
 const getUserLevelInfo = (role: string) => {
@@ -78,18 +79,6 @@ interface Permission {
   assignedAt: string;
 }
 
-interface AccessibleUsersResponse {
-  success: boolean;
-  data: {
-    userId: string;
-    userPermissions: unknown[];
-    accessibleStructures: unknown[];
-    accessibleUsers: User[];
-    totalUsers: number;
-    totalStructures: number;
-  };
-  message?: string;
-}
 
 interface PermissionsResponse {
   success: boolean;
@@ -103,17 +92,12 @@ interface PermissionsResponse {
 }
 
 export default function DemoPage() {
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [accessibleUsers, setAccessibleUsers] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userPermissions, setUserPermissions] = useState<Permission[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
-  const [usersLoading, setUsersLoading] = useState(true);
   const [responseTime, setResponseTime] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const selectedUser = allUsers.find(user => user.id === selectedUserId);
 
   const fetchUserData = async (userId: string) => {
     try {
@@ -121,31 +105,25 @@ export default function DemoPage() {
       setError(null);
       const startTime = Date.now();
 
-      const [accessibleResponse, permissionsResponse] = await Promise.all([
-        fetch(`/api/users/${userId}/accessible-users`),
-        fetch(`/api/users/${userId}/permissions`)
-      ]);
+      const permissionsResponse = await fetch(`/api/users/${userId}/permissions`);
 
       const endTime = Date.now();
       setResponseTime(endTime - startTime);
 
-      if (!accessibleResponse.ok || !permissionsResponse.ok) {
-        throw new Error(`API Error: ${accessibleResponse.status} / ${permissionsResponse.status}`);
+      if (!permissionsResponse.ok) {
+        throw new Error(`API Error: ${permissionsResponse.status}`);
       }
 
-      const accessibleData: AccessibleUsersResponse = await accessibleResponse.json();
       const permissionsData: PermissionsResponse = await permissionsResponse.json();
 
-      if (accessibleData.success && permissionsData.success) {
-        setAccessibleUsers(accessibleData.data.accessibleUsers || []);
+      if (permissionsData.success) {
         setUserPermissions(permissionsData.data.permissions || []);
         setCurrentUser(permissionsData.data.user || null);
       } else {
-        throw new Error(accessibleData.message || permissionsData.message || 'Failed to fetch data');
+        throw new Error(permissionsData.message || 'Failed to fetch data');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
-      setAccessibleUsers([]);
       setUserPermissions([]);
       setCurrentUser(null);
     } finally {
@@ -153,41 +131,14 @@ export default function DemoPage() {
     }
   };
 
-  // Fetch all users on component mount
   useEffect(() => {
-    const fetchAllUsers = async () => {
-      try {
-        setUsersLoading(true);
-        const response = await fetch('/api/users');
-        const result = await response.json();
-        
-        if (result.success) {
-          setAllUsers(result.data);
-          // Auto-select first user
-          if (result.data.length > 0) {
-            setSelectedUserId(result.data[0].id);
-          }
-        } else {
-          setError('Failed to load users');
-        }
-             } catch (err) {
-         setError(err instanceof Error ? err.message : 'Failed to fetch users');
-       } finally {
-        setUsersLoading(false);
-      }
-    };
-
-    fetchAllUsers();
-  }, []);
-
-  useEffect(() => {
-    if (selectedUserId) {
-      fetchUserData(selectedUserId);
+    if (selectedUser) {
+      fetchUserData(selectedUser.id);
     }
-  }, [selectedUserId]);
+  }, [selectedUser]);
 
-  const handleUserChange = (userId: string) => {
-    setSelectedUserId(userId);
+  const handleUserSelect = (user: User) => {
+    setSelectedUser(user);
   };
 
   return (
@@ -236,29 +187,14 @@ export default function DemoPage() {
             <div className="grid md:grid-cols-2 gap-6">
               {/* User Selection */}
               <div>
-                <label htmlFor="user-select" className="block text-sm font-medium mb-2">
-                  Select Demo User:
+                <label htmlFor="user-search" className="block text-sm font-medium mb-2">
+                  Search Demo User:
                 </label>
-                <select
-                  id="user-select"
-                  value={selectedUserId}
-                  onChange={(e) => handleUserChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
-                  disabled={usersLoading}
-                >
-                  {usersLoading ? (
-                    <option>Loading users...</option>
-                  ) : (
-                    allUsers.map((user) => {
-                      const levelInfo = getUserLevelInfo(user.role);
-                      return (
-                        <option key={user.id} value={user.id}>
-                          {user.name} - {user.role} ({levelInfo.level})
-                        </option>
-                      );
-                    })
-                  )}
-                </select>
+                <UserSearch
+                  onUserSelect={handleUserSelect}
+                  placeholder="Search users by name or email..."
+                  className="w-full"
+                />
               </div>
 
               {/* Performance Metrics */}
@@ -317,9 +253,9 @@ export default function DemoPage() {
             loading={loading}
           />
 
-          {/* Accessible Users Panel */}
-          <AccessibleUsersPanel 
-            users={accessibleUsers}
+          {/* Scalable Accessible Users */}
+          <ScalableAccessibleUsers 
+            userId={selectedUser?.id || ''}
             loading={loading}
             currentUserName={currentUser?.name}
           />

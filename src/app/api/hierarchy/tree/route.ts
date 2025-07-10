@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/db/connection';
 import { organisationStructures, userPermissions } from '@/db/schema';
 import { count } from 'drizzle-orm';
@@ -14,7 +14,7 @@ interface TreeNode {
   parentId: string | null;
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Step 1: Get all organization structures
     const allStructures = await db
