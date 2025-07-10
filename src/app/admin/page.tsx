@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, Shield, Plus, Users, Building2, Activity, Clock, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { DemoScripts } from "@/components/demo-scripts";
+
 import { cn } from "@/lib/utils";
 
 interface User {
@@ -114,23 +114,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleDemoReset = async () => {
-    try {
-      setLoading(true);
-      addAdminAction('Demo Reset', 'Resetting system to original seed data...');
-      
-      // Here you would call your reset API endpoint
-      // await fetch('/api/admin/reset', { method: 'POST' });
-      
-      await fetchSystemData();
-      addAdminAction('Demo Reset', 'System successfully reset to original state');
-    } catch (error) {
-      console.error('Reset error:', error);
-      addAdminAction('Demo Reset', 'Failed to reset system', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const flattenStructureTree = (tree: HierarchyTreeNode[]): Structure[] => {
     const flattened: Structure[] = [];
@@ -392,20 +376,6 @@ export default function AdminPage() {
 
           {/* Admin Management Tab */}
           <TabsContent value="management" className="space-y-6">
-            {/* Demo Scripts */}
-            <DemoScripts
-              onCreateStructure={async (name, parentId) => {
-                setNewStructure({ name, parentId });
-                await handleCreateStructure();
-              }}
-              onAssignPermission={async (userId, structureId) => {
-                setPermissionAssignment({ userId, structureIds: [structureId] });
-                await handleAssignPermission();
-              }}
-              onResetDemo={handleDemoReset}
-              allUsers={allUsers}
-              allStructures={allStructures}
-            />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Structure Creation */}
               <Card>
