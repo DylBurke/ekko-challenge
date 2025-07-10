@@ -135,6 +135,9 @@ function TreeNode({
               <Badge variant="outline" className={cn("text-xs", styling.badge)}>
                 {getLevelName(node.level)}
               </Badge>
+              <Badge variant="secondary" className="text-xs">
+                {node.userCount} {node.userCount === 1 ? 'user' : 'users'}
+              </Badge>
               {node.isNewlyCreated && (
                 <Badge className="text-xs bg-green-500 text-white">New</Badge>
               )}

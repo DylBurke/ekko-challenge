@@ -138,18 +138,17 @@ export async function GET(
         and(
           inArray(userPermissions.structureId, accessibleStructureIds),
           or(
-            // Users at lower structural levels (downstream)
-            and(
-              gt(organisationStructures.level, requestingUserHighestLevel),
-              // Ensure the user's structure path is actually downstream from requesting user's permissions
-              or(
-                ...userDirectPermissions.map(permission => 
-                  like(organisationStructures.path, `${permission.structurePath}/%`)
-                )
+            // Users in downstream structures (children, grandchildren, etc.)
+            or(
+              ...userDirectPermissions.map(permission => 
+                like(organisationStructures.path, `${permission.structurePath}/%`)
               )
             ),
-            // Include requesting user themselves
-            eq(users.id, userId)
+            // Include requesting user themselves (only if they are in one of their permitted structures)
+            and(
+              eq(users.id, userId),
+              inArray(organisationStructures.id, exactStructureIds)
+            )
           )
         )
       )
@@ -186,7 +185,7 @@ export async function GET(
     }
     
     if (mode === 'users' && structureId) {
-      return await handleUsersMode(userId, structureId, page, limit, allAccessibleStructures);
+      return await handleUsersMode(userId, structureId, page, limit, allAccessibleStructures, userDirectPermissions);
     }
     
     if (mode === 'search' && searchQuery) {
@@ -235,21 +234,50 @@ interface AccessibleStructure {
 
 // Helper function to build tree structure with user counts
 async function handleTreeMode(userId: string, userDirectPermissions: UserPermission[], allAccessibleStructures: AccessibleStructure[]) {
-  // Get user counts for each accessible structure
-  const structureUserCounts = await Promise.all(
-    allAccessibleStructures.map(async (structure) => {
-      const userCount = await db
-        .select({ count: count() })
-        .from(userPermissions)
-        .innerJoin(users, eq(userPermissions.userId, users.id))
-        .where(eq(userPermissions.structureId, structure.id));
-      
-      return {
-        ...structure,
-        userCount: userCount[0]?.count || 0,
-      };
+  // First get all accessible users (using the same logic as the main function)
+  const requestingUserHighestLevel = Math.min(...userDirectPermissions.map(p => p.structureLevel));
+  const exactStructureIds = userDirectPermissions.map(p => p.structureId);
+  const accessibleStructureIds = allAccessibleStructures.map(s => s.id);
+
+  const accessibleUsers = await db
+    .select({
+      userId: users.id,
+      structureId: userPermissions.structureId,
     })
-  );
+    .from(users)
+    .innerJoin(userPermissions, eq(users.id, userPermissions.userId))
+    .innerJoin(organisationStructures, eq(userPermissions.structureId, organisationStructures.id))
+    .where(
+      and(
+        inArray(userPermissions.structureId, accessibleStructureIds),
+        or(
+          // Users in downstream structures (children, grandchildren, etc.)
+          or(
+            ...userDirectPermissions.map(permission => 
+              like(organisationStructures.path, `${permission.structurePath}/%`)
+            )
+          ),
+          // Include requesting user themselves (only if they are in one of their permitted structures)
+          and(
+            eq(users.id, userId),
+            inArray(organisationStructures.id, exactStructureIds)
+          )
+        )
+      )
+    );
+
+  // Create a map of structure ID to count of accessible users
+  const structureUserCountMap = new Map<string, number>();
+  accessibleUsers.forEach(user => {
+    const currentCount = structureUserCountMap.get(user.structureId) || 0;
+    structureUserCountMap.set(user.structureId, currentCount + 1);
+  });
+
+  // Get user counts for each accessible structure based on actually accessible users
+  const structureUserCounts = allAccessibleStructures.map(structure => ({
+    ...structure,
+    userCount: structureUserCountMap.get(structure.id) || 0,
+  }));
 
   // Build hierarchical tree
   interface TreeNode {
@@ -262,13 +290,24 @@ async function handleTreeMode(userId: string, userDirectPermissions: UserPermiss
   }
 
   const buildTree = (structures: (AccessibleStructure & { userCount: number })[], parentPath: string | null = null): TreeNode[] => {
+    if (parentPath === null) {
+      // For root level, find the topmost structures the user has direct access to
+      const directAccessPaths = userDirectPermissions.map(p => p.structurePath);
+      const rootStructures = structures.filter(s => directAccessPaths.includes(s.path));
+      
+      return rootStructures.map(structure => ({
+        id: structure.id,
+        name: structure.name,
+        path: structure.path,
+        level: structure.level,
+        userCount: structure.userCount,
+        children: buildTree(structures, structure.path),
+      }));
+    }
+    
+    // For child levels, find direct children only
     return structures
       .filter(s => {
-        if (parentPath === null) {
-          // Root level - no parent
-          return !s.path.includes('/');
-        }
-        // Direct children only
         return s.path.startsWith(parentPath + '/') && 
                s.path.split('/').length === parentPath.split('/').length + 1;
       })
@@ -296,7 +335,7 @@ async function handleTreeMode(userId: string, userDirectPermissions: UserPermiss
 }
 
 // Helper function to get paginated users for a specific structure
-async function handleUsersMode(userId: string, structureId: string, page: number, limit: number, allAccessibleStructures: AccessibleStructure[]) {
+async function handleUsersMode(userId: string, structureId: string, page: number, limit: number, allAccessibleStructures: AccessibleStructure[], userDirectPermissions: UserPermission[]) {
   // Verify structure is accessible
   const isAccessible = allAccessibleStructures.some(s => s.id === structureId);
   if (!isAccessible) {
@@ -306,9 +345,41 @@ async function handleUsersMode(userId: string, structureId: string, page: number
     );
   }
 
+  // Get accessible users using the same logic as the main function
+  const exactStructureIds = userDirectPermissions.map(p => p.structureId);
+  const accessibleStructureIds = allAccessibleStructures.map(s => s.id);
+
+  const accessibleUserIds = await db
+    .select({
+      userId: users.id,
+    })
+    .from(users)
+    .innerJoin(userPermissions, eq(users.id, userPermissions.userId))
+    .innerJoin(organisationStructures, eq(userPermissions.structureId, organisationStructures.id))
+    .where(
+      and(
+        inArray(userPermissions.structureId, accessibleStructureIds),
+        or(
+          // Users in downstream structures (children, grandchildren, etc.)
+          or(
+            ...userDirectPermissions.map(permission => 
+              like(organisationStructures.path, `${permission.structurePath}/%`)
+            )
+          ),
+          // Include requesting user themselves (only if they are in one of their permitted structures)
+          and(
+            eq(users.id, userId),
+            inArray(organisationStructures.id, exactStructureIds)
+          )
+        )
+      )
+    );
+
+  const accessibleUserIdSet = new Set(accessibleUserIds.map(u => u.userId));
+
   const offset = (page - 1) * limit;
 
-  // Get paginated users for this structure
+  // Get paginated users for this structure, but only those that are accessible
   const paginatedUsers = await db
     .select({
       id: users.id,
@@ -319,16 +390,27 @@ async function handleUsersMode(userId: string, structureId: string, page: number
     })
     .from(users)
     .innerJoin(userPermissions, eq(users.id, userPermissions.userId))
-    .where(eq(userPermissions.structureId, structureId))
+    .where(
+      and(
+        eq(userPermissions.structureId, structureId),
+        inArray(users.id, Array.from(accessibleUserIdSet))
+      )
+    )
     .orderBy(users.name)
     .limit(limit)
     .offset(offset);
 
-  // Get total count for pagination
+  // Get total count for pagination (only accessible users)
   const totalCount = await db
     .select({ count: count() })
     .from(userPermissions)
-    .where(eq(userPermissions.structureId, structureId));
+    .innerJoin(users, eq(userPermissions.userId, users.id))
+    .where(
+      and(
+        eq(userPermissions.structureId, structureId),
+        inArray(users.id, Array.from(accessibleUserIdSet))
+      )
+    );
 
   const total = totalCount[0]?.count || 0;
   const totalPages = Math.ceil(total / limit);

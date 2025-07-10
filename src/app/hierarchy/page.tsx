@@ -21,36 +21,19 @@ export default function HierarchyPage() {
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [loading, setLoading] = useState(false);
 
-  const addUserCountsToTree = useCallback((tree: HierarchyNode[]): HierarchyNode[] => {
-    // Set user count to 0 for display purposes - we'll show real total separately
-    return tree.map(node => ({
-      ...node,
-      userCount: 0,
-      children: node.children ? addUserCountsToTree(node.children) : undefined
-    }));
-  }, []);
-
   const fetchHierarchyData = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Fetch both hierarchy and users data
-      const [hierarchyResponse, usersResponse] = await Promise.all([
-        fetch('/api/hierarchy/tree'),
-        fetch('/api/users')
-      ]);
+      // Fetch hierarchy data which includes user counts
+      const hierarchyResponse = await fetch('/api/hierarchy/tree');
       
-      if (hierarchyResponse.ok && usersResponse.ok) {
+      if (hierarchyResponse.ok) {
         const hierarchyData = await hierarchyResponse.json();
-        const usersData = await usersResponse.json();
         
         if (hierarchyData.success) {
-          const treeWithUserCounts = addUserCountsToTree(hierarchyData.data.tree);
-          setHierarchyTree(treeWithUserCounts);
-        }
-        
-        if (usersData.success) {
-          setTotalUsers(usersData.data.length);
+          setHierarchyTree(hierarchyData.data.tree);
+          setTotalUsers(hierarchyData.data.metadata.totalUsers);
         }
       }
     } catch (error) {
@@ -58,7 +41,7 @@ export default function HierarchyPage() {
     } finally {
       setLoading(false);
     }
-  }, [addUserCountsToTree]);
+  }, []);
 
   useEffect(() => {
     fetchHierarchyData();
