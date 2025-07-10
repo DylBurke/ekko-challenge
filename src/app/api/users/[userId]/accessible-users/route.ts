@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/connection';
 import { organisationStructures, users, userPermissions } from '@/db/schema';
-import { eq, like, or, inArray, and, gt, ilike, count } from 'drizzle-orm';
+import { eq, like, or, inArray, and, ilike, count } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
@@ -110,10 +110,7 @@ export async function GET(
       });
     }
 
-    // Step 5: Get the requesting user's highest access level (lowest number = highest level)
-    const requestingUserHighestLevel = Math.min(...userDirectPermissions.map(p => p.structureLevel));
-
-        // Step 6: Find users who are positioned downstream from the requesting user
+        // Step 5: Find users who are positioned downstream from the requesting user
     // This means users whose permissions are to structures that are:
     // 1. Within the requesting user's accessible structures
     // 2. At a LOWER organisational level (higher number) than the requesting user's position
@@ -235,7 +232,6 @@ interface AccessibleStructure {
 // Helper function to build tree structure with user counts
 async function handleTreeMode(userId: string, userDirectPermissions: UserPermission[], allAccessibleStructures: AccessibleStructure[]) {
   // First get all accessible users (using the same logic as the main function)
-  const requestingUserHighestLevel = Math.min(...userDirectPermissions.map(p => p.structureLevel));
   const exactStructureIds = userDirectPermissions.map(p => p.structureId);
   const accessibleStructureIds = allAccessibleStructures.map(s => s.id);
 
