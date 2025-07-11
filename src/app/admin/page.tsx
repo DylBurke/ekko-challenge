@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle, Shield, Plus, Users, Building2, Activity, Clock, CheckCircle2, AlertCircle, RefreshCw, UserPlus, Search } from "lucide-react";
 import Link from "next/link";
 import UserSearch from "@/components/user-search";
+import RevokePermissions from "@/components/revoke-permissions";
 import { ToastContainer } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
 
@@ -91,12 +92,7 @@ export default function AdminPage() {
     },
   });
 
-  // Fetch initial data
-  useEffect(() => {
-    fetchSystemData();
-  }, []);
-
-  const fetchSystemData = async () => {
+  const fetchSystemData = useCallback(async () => {
     try {
       setLoading(true);
       const [usersResponse, structuresResponse] = await Promise.all([
@@ -129,7 +125,12 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Fetch initial data
+  useEffect(() => {
+    fetchSystemData();
+  }, [fetchSystemData]);
 
   const handleUserSelect = (user: User) => {
     setPermissionAssignment(prev => ({ ...prev, selectedUser: user }));
@@ -727,6 +728,17 @@ export default function AdminPage() {
                   </Button>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Revoke Permissions - Centered below the two-column layout */}
+            <div className="flex justify-center">
+              <div className="w-full max-w-2xl">
+                <RevokePermissions
+                  onSuccess={success}
+                  onError={error}
+                  onAction={addAdminAction}
+                />
+              </div>
             </div>
           </TabsContent>
 
