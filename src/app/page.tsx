@@ -45,7 +45,7 @@ export default function Home() {
             🏢 Welcome to Gekko&apos;s Permission System
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            A scalable organizational hierarchy system that manages user permissions 
+            A scalable organisational hierarchy system that manages user permissions 
             based on company structure. <strong>See who can access what, and why.</strong>
           </p>
         </div>
@@ -59,7 +59,7 @@ export default function Home() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TreePine className="h-5 w-5 text-green-600" />
-                  1. Organizational Structure
+                  1. Organisational Structure
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -101,7 +101,7 @@ export default function Home() {
                   🚀 Scales to 100,000+ users with instant search and tree navigation
                 </p>
                 <p className="text-sm">
-                  No performance issues, even with massive organizations.
+                  No performance issues, even with massive organisations.
                 </p>
               </CardContent>
             </Card>
@@ -140,7 +140,7 @@ export default function Home() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="h-5 w-5" />
-                  Organization Builder
+                  Organisation Builder
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -172,7 +172,7 @@ export default function Home() {
                   <TreePine className="h-8 w-8 text-green-600" />
                   <div>
                     <h4 className="font-semibold">🏗️ Hierarchy</h4>
-                    <p className="text-xs text-muted-foreground">View organizational structure</p>
+                    <p className="text-xs text-muted-foreground">View organisational structure</p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </Link>
@@ -231,7 +231,7 @@ export default function Home() {
               <div>
                 <div className="text-2xl mb-2">1️⃣</div>
                 <h4 className="font-semibold mb-1">View the Hierarchy</h4>
-                <p className="text-sm text-muted-foreground">Start by exploring the organizational structure</p>
+                <p className="text-sm text-muted-foreground">Start by exploring the organisational structure</p>
               </div>
               <div>
                 <div className="text-2xl mb-2">2️⃣</div>

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/connection';
 import { organisationStructures, userPermissions } from '@/db/schema';
-import { count } from 'drizzle-orm';
+import { count, like, or, eq } from 'drizzle-orm';
 
 // I added this interface to help with the tree structure
 interface TreeNode {
@@ -28,37 +28,52 @@ export async function GET() {
       .from(organisationStructures)
       .orderBy(organisationStructures.level, organisationStructures.name);
 
-    // Step 2: Get user counts for each structure
-    const userCounts = await db
-      .select({
-        structureId: userPermissions.structureId,
-        userCount: count(userPermissions.userId),
-      })
-      .from(userPermissions)
-      .groupBy(userPermissions.structureId);
+    // Step 2: Calculate hierarchical user counts (structure + all downstream structures)
+    const calculateHierarchicalUserCount = async (structure: { id: string; path: string }): Promise<number> => {
+      // Get users directly assigned to this structure + all downstream structures
+      const userCount = await db
+        .select({
+          userCount: count(userPermissions.userId),
+        })
+        .from(userPermissions)
+        .innerJoin(organisationStructures, eq(userPermissions.structureId, organisationStructures.id))
+        .where(
+          or(
+            // Users directly in this structure
+            eq(organisationStructures.id, structure.id),
+            // Users in all downstream structures (children, grandchildren, etc.)
+            like(organisationStructures.path, `${structure.path}/%`)
+          )
+        );
+      
+      return Number(userCount[0]?.userCount || 0);
+    };
 
-    // Create a map for quick user count lookup
-    const userCountMap = new Map(
-      userCounts.map(uc => [uc.structureId, Number(uc.userCount)])
+    // Step 3: Calculate user counts for all structures
+    const structuresWithCounts = await Promise.all(
+      allStructures.map(async (structure) => ({
+        ...structure,
+        userCount: await calculateHierarchicalUserCount(structure),
+      }))
     );
 
-    // Step 3: Convert flat structure to tree nodes
+    // Step 4: Convert flat structure to tree nodes
     const nodeMap = new Map<string, TreeNode>();
     
     // Create all nodes first
-    allStructures.forEach(structure => {
+    structuresWithCounts.forEach(structure => {
       nodeMap.set(structure.id, {
         id: structure.id,
         name: structure.name,
         level: structure.level,
         path: structure.path,
         parentId: structure.parentId,
-        userCount: userCountMap.get(structure.id) || 0,
+        userCount: structure.userCount,
         children: [],
       });
     });
 
-    // Step 4: Build the tree by linking children to parents
+    // Step 5: Build the tree by linking children to parents
     const rootNodes: TreeNode[] = [];
 
     allStructures.forEach(structure => {
@@ -76,7 +91,7 @@ export async function GET() {
       }
     });
 
-    // Step 5: Sort children at each level for consistent ordering
+    // Step 6: Sort children at each level for consistent ordering
     const sortChildren = (node: TreeNode) => {
       node.children.sort((a, b) => {
         // Sort by level first, then by name
@@ -92,12 +107,20 @@ export async function GET() {
 
     rootNodes.forEach(sortChildren);
 
-    // Step 6: Calculate tree statistics
+    // Step 7: Calculate tree statistics
     const totalStructures = allStructures.length;
-    const totalUsers = userCounts.reduce((sum, uc) => sum + Number(uc.userCount), 0);
+    
+    // Get total unique users (avoid double counting)
+    const totalUniqueUsers = await db
+      .select({
+        totalUsers: count(userPermissions.userId),
+      })
+      .from(userPermissions);
+    
+    const totalUsers = Number(totalUniqueUsers[0]?.totalUsers || 0);
     const maxDepth = Math.max(...allStructures.map(s => s.level)) + 1;
 
-    // Step 7: Get some additional insights
+    // Step 8: Get some additional insights
     const levelCounts = allStructures.reduce((acc, structure) => {
       acc[structure.level] = (acc[structure.level] || 0) + 1;
       return acc;

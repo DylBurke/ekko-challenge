@@ -71,13 +71,13 @@ const getLevelName = (level: number): string => {
   }
 };
 
-// Helper function to determine user's highest organizational level
+// Helper function to determine user's highest organisational level
 const getUserHighestLevel = (user: User): number => {
   if (!user.structures || user.structures.length === 0) return 4; // Default to individual level
   return Math.min(...user.structures.map(s => s.level));
 };
 
-// Group users by their highest organizational level
+// Group users by their highest organisational level
 const groupUsersByLevel = (users: User[]) => {
   const groups: Record<number, User[]> = {};
   
@@ -166,7 +166,7 @@ export function AccessibleUsersPanel({ users, loading, currentUserName }: Access
               <p className="text-xl font-bold text-foreground">{totalUsers}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Organizational Levels</p>
+              <p className="text-sm text-muted-foreground">Organisational Levels</p>
               <p className="text-xl font-bold text-foreground">{totalLevels}</p>
             </div>
           </div>
@@ -244,7 +244,7 @@ export function AccessibleUsersPanel({ users, loading, currentUserName }: Access
                       </div>
                     </div>
 
-                    {/* User's Organizational Structures */}
+                    {/* User's Organisational Structures */}
                     {user.structures && user.structures.length > 0 && (
                       <div className="space-y-2">
                         <p className="text-xs font-medium text-muted-foreground">Assigned to:</p>
