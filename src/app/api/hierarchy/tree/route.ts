@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/connection';
 import { organisationStructures, userPermissions } from '@/db/schema';
-import { count, like, or, eq } from 'drizzle-orm';
+import { count } from 'drizzle-orm';
 
 // I added this interface to help with the tree structure
 interface TreeNode {
@@ -28,34 +28,25 @@ export async function GET() {
       .from(organisationStructures)
       .orderBy(organisationStructures.level, organisationStructures.name);
 
-    // Step 2: Calculate hierarchical user counts (structure + all downstream structures)
-    const calculateHierarchicalUserCount = async (structure: { id: string; path: string }): Promise<number> => {
-      // Get users directly assigned to this structure + all downstream structures
-      const userCount = await db
-        .select({
-          userCount: count(userPermissions.userId),
-        })
-        .from(userPermissions)
-        .innerJoin(organisationStructures, eq(userPermissions.structureId, organisationStructures.id))
-        .where(
-          or(
-            // Users directly in this structure
-            eq(organisationStructures.id, structure.id),
-            // Users in all downstream structures (children, grandchildren, etc.)
-            like(organisationStructures.path, `${structure.path}/%`)
-          )
-        );
-      
-      return Number(userCount[0]?.userCount || 0);
-    };
+    // Step 2: Get direct user counts for each structure (users directly assigned to that structure only)
+    const userCounts = await db
+      .select({
+        structureId: userPermissions.structureId,
+        userCount: count(userPermissions.userId),
+      })
+      .from(userPermissions)
+      .groupBy(userPermissions.structureId);
 
-    // Step 3: Calculate user counts for all structures
-    const structuresWithCounts = await Promise.all(
-      allStructures.map(async (structure) => ({
-        ...structure,
-        userCount: await calculateHierarchicalUserCount(structure),
-      }))
+    // Create a map for quick user count lookup
+    const userCountMap = new Map(
+      userCounts.map(uc => [uc.structureId, Number(uc.userCount)])
     );
+
+    // Step 3: Add user counts to structures
+    const structuresWithCounts = allStructures.map(structure => ({
+      ...structure,
+      userCount: userCountMap.get(structure.id) || 0,
+    }));
 
     // Step 4: Convert flat structure to tree nodes
     const nodeMap = new Map<string, TreeNode>();

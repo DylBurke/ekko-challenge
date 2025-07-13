@@ -129,6 +129,20 @@ export function UserPermissionsPanel({ user, permissions, loading }: UserPermiss
   }, {} as Record<string, number>);
 
   const uniqueLevels = [...new Set(permissions.map(p => p.structure.level))].sort();
+  
+  // Calculate accessible levels based on materialized path cascading
+  // If user has permission at level X, they can access X and all levels below (higher numbers)
+  const accessibleLevels = uniqueLevels.length > 0 ? 
+    Array.from(new Set(uniqueLevels.flatMap(level => {
+      // For each permission level, user can access that level and all levels below
+      const maxLevel = 3; // Team level is the deepest
+      const accessibleFromThisLevel = [];
+      for (let i = level; i <= maxLevel; i++) {
+        accessibleFromThisLevel.push(i);
+      }
+      return accessibleFromThisLevel;
+    }))).sort() : [];
+  
   const hasMultiplePermissions = permissions.length > 1;
   const hasCrossFunctionalAccess = permissions.length > 1 && 
     new Set(permissions.map(p => p.structure.path.split('/')[1])).size > 1;
@@ -167,12 +181,12 @@ export function UserPermissionsPanel({ user, permissions, loading }: UserPermiss
           </h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-muted-foreground">Total Permissions</p>
+              <p className="text-sm text-muted-foreground">Total Permission Assignments</p>
               <p className="text-xl font-bold text-foreground">{permissions.length}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Access Levels</p>
-              <p className="text-xl font-bold text-foreground">{uniqueLevels.length}</p>
+              <p className="text-xl font-bold text-foreground">{accessibleLevels.join(',')}</p>
             </div>
           </div>
           
