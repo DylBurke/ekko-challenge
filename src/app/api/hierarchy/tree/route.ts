@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/connection';
-import { organisationStructures, userPermissions } from '@/db/schema';
+import { organisationStructures, userPermissions, users } from '@/db/schema';
 import { count } from 'drizzle-orm';
 
 // I added this interface to help with the tree structure
@@ -101,12 +101,12 @@ export async function GET() {
     // Step 7: Calculate tree statistics
     const totalStructures = allStructures.length;
     
-    // Get total unique users (avoid double counting)
+    // Get total unique users
     const totalUniqueUsers = await db
       .select({
-        totalUsers: count(userPermissions.userId),
+        totalUsers: count(),
       })
-      .from(userPermissions);
+      .from(users);
     
     const totalUsers = Number(totalUniqueUsers[0]?.totalUsers || 0);
     const maxDepth = Math.max(...allStructures.map(s => s.level)) + 1;

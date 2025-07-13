@@ -21,7 +21,10 @@ export const organisationStructures = pgTable('organisation_structures', {
 }, (table) => [
   index('parent_id_idx').on(table.parentId),
   index('level_idx').on(table.level),
-  index('path_idx').on(table.path),
+  // Optimized for materialized path queries with LIKE 'path%'
+  index('path_prefix_idx').on(table.path),
+  // Composite index for common query patterns (level + path for filtered hierarchy queries)
+  index('level_path_idx').on(table.level, table.path),
 ]);
 
 // Users table
