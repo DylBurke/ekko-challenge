@@ -113,10 +113,14 @@ userPermissions (26 permission assignments)
 ## API Endpoints
 
 - `GET /api/users` - List all users
+- `POST /api/users` - Create a new user
 - `GET /api/users/[userId]/permissions` - User's direct permissions
 - `GET /api/users/[userId]/accessible-users` - Users visible to this user
 - `GET /api/hierarchy/tree` - Complete organisational tree
+- `POST /api/hierarchy/create` - Create a new structure in the org tree
 - `POST /api/permissions/assign` - Assign permissions to users
+- `GET /api/users/search` - Search users to account for major scaling
+- `DELETE /api/users/[userId]/permissions/[permissionId]` - Revoke permission level from a user
 
 ## Troubleshooting
 
