@@ -69,7 +69,7 @@ export async function GET(
       });
     }
 
-    // Step 3: Find all downstream structures using materialized paths
+    // Step 3: Find all downstream structures using materialised paths
     // For each structure the user has access to, find all descendant structures
     const pathConditions = userDirectPermissions.map(permission => 
       like(organisationStructures.path, `${permission.structurePath}/%`)

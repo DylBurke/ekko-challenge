@@ -1,14 +1,14 @@
 # Ekko Challenge - Hierarchical Permission System
 
-A Next.js application demonstrating a hierarchical organizational permission system using materialized paths for efficient cascading permissions.
+A Next.js application demonstrating a hierarchical organisational permission system using materialised paths for efficient cascading permissions.
 
 ## Features
 
 - 🏢 **4-Level Hierarchy**: Company → Division → Department → Team
 - 🔒 **Cascading Permissions**: Managers can see downstream users automatically
-- ⚡ **Materialized Path Optimization**: Lightning-fast hierarchical queries
+- ⚡ **Materialised Path Optimisation**: Lightning-fast hierarchical queries
 - 📊 **Real-time User Management**: Interactive user and permission management
-- 🎯 **Performance Optimized**: Handles enterprise-scale user bases
+- 🎯 **Performance Optimised**: Handles enterprise-scale user bases
 
 ## Quick Setup
 
@@ -37,7 +37,7 @@ npm install
 # Push schema to database
 npm run db:push
 
-# Seed with test data (25 users across organizational hierarchy)
+# Seed with test data (25 users across organisational hierarchy)
 npm run db:seed
 
 # Test connection
@@ -64,8 +64,8 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 - **`/`** - Homepage with feature overview
 - **`/demo`** - User Demo: Select users to see their permissions and accessible users
-- **`/hierarchy`** - Organizational Tree: Visual representation of the 4-level hierarchy
-- **`/admin`** - Admin Panel: Manage user permissions and organizational structures
+- **`/hierarchy`** - Organisational Tree: Visual representation of the 4-level hierarchy
+- **`/admin`** - Admin Panel: Manage user permissions and organisational structures
 
 ### Sample Users (Seeded Data)
 
@@ -82,8 +82,8 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ```
 organisationStructures (17 structures)
 ├── id, name, level, parentId
-├── path (materialized path: "company/engineering/frontend")
-└── Optimized indexes: path_prefix_idx, level_path_idx
+├── path (materialised path: "company/engineering/frontend")
+└── Optimised indexes: path_prefix_idx, level_path_idx
 
 users (25 users)
 ├── id, name, email, role, spiritAnimal
@@ -91,7 +91,7 @@ users (25 users)
 
 userPermissions (26 permission assignments)
 ├── userId, structureId
-└── Enables cascading access via materialized paths
+└── Enables cascading access via materialised paths
 ```
 
 ### Key Technologies
@@ -101,12 +101,12 @@ userPermissions (26 permission assignments)
 - **Drizzle ORM** - Type-safe database queries
 - **PostgreSQL** - Supabase-hosted database
 - **Tailwind CSS** - Utility-first styling
-- **Materialized Paths** - Efficient hierarchical queries
+- **Materialised Paths** - Efficient hierarchical queries
 
 ### Performance Features
 
 - **O(1) Hierarchy Queries**: Single query for any depth traversal
-- **Optimized Indexes**: 5-10x faster permission lookups
+- **Optimised Indexes**: 5-10x faster permission lookups
 - **Enterprise Scaling**: Designed for 300k+ users
 - **Real-time Updates**: Live permission and user management
 
@@ -115,7 +115,7 @@ userPermissions (26 permission assignments)
 - `GET /api/users` - List all users
 - `GET /api/users/[userId]/permissions` - User's direct permissions
 - `GET /api/users/[userId]/accessible-users` - Users visible to this user
-- `GET /api/hierarchy/tree` - Complete organizational tree
+- `GET /api/hierarchy/tree` - Complete organisational tree
 - `POST /api/permissions/assign` - Assign permissions to users
 
 ## Troubleshooting

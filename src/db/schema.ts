@@ -15,13 +15,13 @@ export const organisationStructures = pgTable('organisation_structures', {
   name: varchar('name', { length: 255 }).notNull(),
   level: integer('level').notNull(), // 0=Company, 1=Division, 2=Department, 3=Team
   parentId: uuid('parent_id'), // Will be handled in relations
-  path: text('path').notNull(), // Materialized path for efficient queries (e.g., "company/engineering/frontend/react")
+  path: text('path').notNull(), // Materialised path for efficient queries (e.g., "company/engineering/frontend/react")
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [
   index('parent_id_idx').on(table.parentId),
   index('level_idx').on(table.level),
-  // Optimized for materialized path queries with LIKE 'path%'
+  // Optimised for materialised path queries with LIKE 'path%'
   index('path_prefix_idx').on(table.path),
   // Composite index for common query patterns (level + path for filtered hierarchy queries)
   index('level_path_idx').on(table.level, table.path),

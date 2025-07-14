@@ -130,7 +130,7 @@ export function UserPermissionsPanel({ user, permissions, loading }: UserPermiss
 
   const uniqueLevels = [...new Set(permissions.map(p => p.structure.level))].sort();
   
-  // Calculate accessible levels based on materialized path cascading
+  // Calculate accessible levels based on materialised path cascading
   // If user has permission at level X, they can access X and all levels below (higher numbers)
   const accessibleLevels = uniqueLevels.length > 0 ? 
     Array.from(new Set(uniqueLevels.flatMap(level => {
