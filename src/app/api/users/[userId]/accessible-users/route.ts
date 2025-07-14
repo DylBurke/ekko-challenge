@@ -27,6 +27,7 @@ export async function GET(
     }
 
     // Step 1: Get requesting user's information and their permissions
+    // At a later stage, I wanted to implement auth middleware so that upon login, this would happen
     const requestingUser = await db
       .select({
         id: users.id,
@@ -90,7 +91,8 @@ export async function GET(
         or(
           // Include descendant structures (children, grandchildren, etc.)
           ...pathConditions,
-          // Include the exact structures they have direct access to
+          // Include the exact structures they have direct access to (I do this because I want to also return the requesting
+          // user's information on themselves for better UX)
           inArray(organisationStructures.id, exactStructureIds)
         )
       );
@@ -109,12 +111,6 @@ export async function GET(
         },
       });
     }
-
-        // Step 5: Find users who are positioned downstream from the requesting user
-    // This means users whose permissions are to structures that are:
-    // 1. Within the requesting user's accessible structures
-    // 2. At a LOWER organisational level (higher number) than the requesting user's position
-    // Simple rule: users can only see users with permissions to structures that are children of their structures
     
     const accessibleUsers = await db
       .select({
@@ -131,27 +127,10 @@ export async function GET(
       .from(users)
       .innerJoin(userPermissions, eq(users.id, userPermissions.userId))
       .innerJoin(organisationStructures, eq(userPermissions.structureId, organisationStructures.id))
-      .where(
-        and(
-          inArray(userPermissions.structureId, accessibleStructureIds),
-          or(
-            // Users in downstream structures (children, grandchildren, etc.)
-            or(
-              ...userDirectPermissions.map(permission => 
-                like(organisationStructures.path, `${permission.structurePath}/%`)
-              )
-            ),
-            // Include requesting user themselves (only if they are in one of their permitted structures)
-            and(
-              eq(users.id, userId),
-              inArray(organisationStructures.id, exactStructureIds)
-            )
-          )
-        )
-      )
+      .where(getAccessibleUsersWhereClause(userId, userDirectPermissions, allAccessibleStructures))
       .orderBy(organisationStructures.level, users.name);
 
-    // Step 7: Group results by user to avoid duplicates
+    // Step 5: Group results by user to avoid duplicates
     const userMap = new Map();
     
     accessibleUsers.forEach(result => {
@@ -229,12 +208,36 @@ interface AccessibleStructure {
   level: number;
 }
 
-// Helper function to build tree structure with user counts
-async function handleTreeMode(userId: string, userDirectPermissions: UserPermission[], allAccessibleStructures: AccessibleStructure[]) {
-  // First get all accessible users (using the same logic as the main function)
+// Reusable function to build the accessible users WHERE clause
+function getAccessibleUsersWhereClause(
+  userId: string, 
+  userDirectPermissions: UserPermission[], 
+  allAccessibleStructures: AccessibleStructure[]
+) {
   const exactStructureIds = userDirectPermissions.map(p => p.structureId);
   const accessibleStructureIds = allAccessibleStructures.map(s => s.id);
 
+  return and(
+    inArray(userPermissions.structureId, accessibleStructureIds),
+    or(
+      // Users in downstream structures (children, grandchildren, etc.)
+      or(
+        ...userDirectPermissions.map(permission => 
+          like(organisationStructures.path, `${permission.structurePath}/%`)
+        )
+      ),
+      // Include requesting user themselves (only if they are in one of their permitted structures)
+      and(
+        eq(users.id, userId),
+        inArray(organisationStructures.id, exactStructureIds)
+      )
+    )
+  );
+}
+
+// Helper function to build tree structure in the FE with user counts
+async function handleTreeMode(userId: string, userDirectPermissions: UserPermission[], allAccessibleStructures: AccessibleStructure[]) {
+  // Get accessible users with minimal selection for performance
   const accessibleUsers = await db
     .select({
       userId: users.id,
@@ -243,26 +246,9 @@ async function handleTreeMode(userId: string, userDirectPermissions: UserPermiss
     .from(users)
     .innerJoin(userPermissions, eq(users.id, userPermissions.userId))
     .innerJoin(organisationStructures, eq(userPermissions.structureId, organisationStructures.id))
-    .where(
-      and(
-        inArray(userPermissions.structureId, accessibleStructureIds),
-        or(
-          // Users in downstream structures (children, grandchildren, etc.)
-          or(
-            ...userDirectPermissions.map(permission => 
-              like(organisationStructures.path, `${permission.structurePath}/%`)
-            )
-          ),
-          // Include requesting user themselves (only if they are in one of their permitted structures)
-          and(
-            eq(users.id, userId),
-            inArray(organisationStructures.id, exactStructureIds)
-          )
-        )
-      )
-    );
+    .where(getAccessibleUsersWhereClause(userId, userDirectPermissions, allAccessibleStructures));
 
-  // Create a map of structure ID to count of accessible users
+  // Create a map of structure ID to count accessible users
   const structureUserCountMap = new Map<string, number>();
   accessibleUsers.forEach(user => {
     const currentCount = structureUserCountMap.get(user.structureId) || 0;
@@ -330,7 +316,7 @@ async function handleTreeMode(userId: string, userDirectPermissions: UserPermiss
   });
 }
 
-// Helper function to get paginated users for a specific structure
+// Helper function to get paginated users for a specific structure so that as we scale the list won't break
 async function handleUsersMode(userId: string, structureId: string, page: number, limit: number, allAccessibleStructures: AccessibleStructure[], userDirectPermissions: UserPermission[]) {
   // Verify structure is accessible
   const isAccessible = allAccessibleStructures.some(s => s.id === structureId);
@@ -341,10 +327,7 @@ async function handleUsersMode(userId: string, structureId: string, page: number
     );
   }
 
-  // Get accessible users using the same logic as the main function
-  const exactStructureIds = userDirectPermissions.map(p => p.structureId);
-  const accessibleStructureIds = allAccessibleStructures.map(s => s.id);
-
+  // Get accessible users using the reusable WHERE clause
   const accessibleUserIds = await db
     .select({
       userId: users.id,
@@ -352,24 +335,7 @@ async function handleUsersMode(userId: string, structureId: string, page: number
     .from(users)
     .innerJoin(userPermissions, eq(users.id, userPermissions.userId))
     .innerJoin(organisationStructures, eq(userPermissions.structureId, organisationStructures.id))
-    .where(
-      and(
-        inArray(userPermissions.structureId, accessibleStructureIds),
-        or(
-          // Users in downstream structures (children, grandchildren, etc.)
-          or(
-            ...userDirectPermissions.map(permission => 
-              like(organisationStructures.path, `${permission.structurePath}/%`)
-            )
-          ),
-          // Include requesting user themselves (only if they are in one of their permitted structures)
-          and(
-            eq(users.id, userId),
-            inArray(organisationStructures.id, exactStructureIds)
-          )
-        )
-      )
-    );
+    .where(getAccessibleUsersWhereClause(userId, userDirectPermissions, allAccessibleStructures));
 
   const accessibleUserIdSet = new Set(accessibleUserIds.map(u => u.userId));
 

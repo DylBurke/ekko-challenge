@@ -54,7 +54,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateStr
       );
     }
 
-    // Trim and validate name
+    // Trim and validate the name
     const name = body.name.trim();
     if (name.length === 0) {
       return NextResponse.json(
@@ -97,8 +97,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateStr
 
     // Step 1: Get parent information if parentId is provided
     let parent: { id: string; name: string; path: string; level: number } | null = null;
-    let newLevel = 0;
-    let newPath = '';
+    let newLevel = 0; // initialise the level
+    let newPath = ''; // initialise the path for now as well
 
     if (parentId) {
       const parentResult = await db
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateStr
       }
 
       parent = parentResult[0];
-      newLevel = parent.level + 1;
+      newLevel = parent.level + 1; // One level deeper so I'm adding 1
       
       // Create path: parent.path + '/' + slugified name
       const slug = slugify(name);
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateStr
       );
     }
 
-    // Step 3: Check for path conflicts
+    // Step 3: Check for path conflicts with the new path just created
     const existingPath = await db
       .select()
       .from(organisationStructures)
@@ -179,7 +179,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateStr
       );
     }
 
-    // Step 4: Validate hierarchy depth (prevent too deep nesting)
+    // Step 4: Validate hierarchy depth (prevent too deep nesting for now, incase someone by accident creates
+    // a team beneath a team beneath a team again)
     const maxDepth = 5; // Company -> Division -> Department -> Team -> Sub-Team
     if (newLevel >= maxDepth) {
       return NextResponse.json(
@@ -204,6 +205,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateStr
       .returning();
 
     // Step 6: Get hierarchy statistics
+    // I'm going to use a promise.all because it's a pretty safe bet, but could also use a transaction
     const [totalStructures, childrenCount] = await Promise.all([
       // Total structures count
       db
@@ -284,7 +286,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateStr
   }
 }
 
-// Helper function to create URL-friendly slugs
+// Helper function to create URL-friendly slugs for the materialised path
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -301,7 +303,7 @@ function getLevelName(level: number): string {
     1: 'Division',
     2: 'Department', 
     3: 'Team',
-    4: 'Sub-Team',
+    4: 'Sub-Team', // But I won't be using this for now
   };
   return levelNames[level] || `Level ${level}`;
 } 

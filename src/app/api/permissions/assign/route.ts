@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/connection';
 import { organisationStructures, users, userPermissions } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-
 interface AssignPermissionRequest {
   userId: string;
   structureId: string;
@@ -28,13 +27,14 @@ interface AssignPermissionResponse {
         level: number;
         levelName: string;
       };
-      assignedAt: Date;
+      assignedAt: Date; // I added this for a potential audit trail
     };
   };
   error?: string;
   message?: string;
 }
 
+// This endpoint is to assign a permission level to a user
 export async function POST(request: NextRequest): Promise<NextResponse<AssignPermissionResponse>> {
   try {
     // Parse and validate request body
@@ -52,6 +52,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<AssignPer
     }
 
     // Validate UUID format
+    // I know this is manual regex check. If I had a bit more time I would rather use Zod
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(body.userId) || !uuidRegex.test(body.structureId)) {
       return NextResponse.json(
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<AssignPer
       );
     }
 
-    // Step 1: Verify user exists
+    // Step 1: Verify user exists. So basically this assumes you have to create the user first before assigning
     const userExists = await db
       .select({
         id: users.id,

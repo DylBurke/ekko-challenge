@@ -98,6 +98,11 @@ export default function HierarchyPage() {
           <p className="text-muted-foreground">
             Interactive view of the organisational structure with color-coded levels
           </p>
+          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> Each user count shows the number of employees with permissions specifically assigned to that structure, not the cumulative count of all users in that division or department.
+            </p>
+          </div>
         </div>
 
         <AdminHierarchyTree 

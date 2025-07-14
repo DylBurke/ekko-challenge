@@ -3,7 +3,7 @@ import { db } from '@/db/connection';
 import { organisationStructures, userPermissions, users } from '@/db/schema';
 import { count } from 'drizzle-orm';
 
-// I added this interface to help with the tree structure
+// I added this interface to help define a single structure in the org tree
 interface TreeNode {
   id: string;
   name: string;
@@ -14,6 +14,7 @@ interface TreeNode {
   parentId: string | null;
 }
 
+// This endpoint us for retrieving all the strcutures to build a company tree
 export async function GET() {
   try {
     // Step 1: Get all organisation structures
@@ -28,7 +29,8 @@ export async function GET() {
       .from(organisationStructures)
       .orderBy(organisationStructures.level, organisationStructures.name);
 
-    // Step 2: Get direct user counts for each structure (users directly assigned to that structure only)
+    // Step 2: Get direct user counts for each structure to show on the FE (users directly assigned to that structure only -
+    // I acknowledge this might be bad UX but it's actually better for performance and is clearer for my demonstration)
     const userCounts = await db
       .select({
         structureId: userPermissions.structureId,
@@ -37,7 +39,7 @@ export async function GET() {
       .from(userPermissions)
       .groupBy(userPermissions.structureId);
 
-    // Create a map for quick user count lookup
+    // Creating a map for quick user count lookup
     const userCountMap = new Map(
       userCounts.map(uc => [uc.structureId, Number(uc.userCount)])
     );
@@ -98,7 +100,7 @@ export async function GET() {
 
     rootNodes.forEach(sortChildren);
 
-    // Step 7: Calculate tree statistics
+    // Step 7: Calculate tree statistics for FE
     const totalStructures = allStructures.length;
     
     // Get total unique users
